@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background: #000;
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <div id="score">Score: 0</div>
+        <div id="lives">Lives: 3</div>
+    </div>
+    <canvas width="400" height="400" id="pacman"></canvas>
+    <script>
+        const canvas = document.getElementById('pacman');
+        const context = canvas.getContext('2d');
+        const grid = 20;
+        let count = 0;
+        let score = 0;
+        let lives = 3;
+
+        const pacman = {
+            x: grid * 1,
+            y: grid * 1,
+            dx: grid,
+            dy: 0,
+            cells: []
+        };
+
+        const enemy = {
+            x: grid * 10,
+            y: grid * 10,
+            dx: grid,
+            dy: 0,
+            cells: []
+        };
+
+        const walls = [
+            { x: 0, y: 0, width: 400, height: 20 },
+            { x: 0, y: 380, width: 400, height: 20 },
+            { x: 0, y: 0, width: 20, height: 400 },
+            { x: 380, y: 0, width: 20, height: 400 },
+            { x: 60, y: 60, width: 280, height: 20 },
+            { x: 60, y: 320, width: 280, height: 20 },
+            { x: 60, y: 60, width: 20, height: 280 },
+            { x: 320, y: 60, width: 20, height: 280 }
+        ];
+
+        function clear() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawWalls() {
+            context.fillStyle = '#0000FF';
+            walls.forEach(wall => {
+                context.fillRect(wall.x, wall.y, wall.width, wall.height);
+            });
+        }
+
+        function drawPacman() {
+            context.fillStyle = '#FFFF00';
+            context.beginPath();
+            context.arc(pacman.x + grid / 2, pacman.y + grid / 2, grid / 2, 0.2 * Math.PI, 1.8 * Math.PI);
+            context.lineTo(pacman.x + grid / 2, pacman.y + grid / 2);
+            context.fill();
+        }
+
+        function drawEnemy() {
+            context.fillStyle = '#FF0000';
+            context.fillRect(enemy.x, enemy.y, grid, grid);
+        }
+
+        function movePacman() {
+            pacman.x += pacman.dx;
+            pacman.y += pacman.dy;
+
+            if (pacman.x < 0) pacman.x = canvas.width - grid;
+            if (pacman.x >= canvas.width) pacman.x = 0;
+            if (pacman.y < 0) pacman.y = canvas.height - grid;
+            if (pacman.y >= canvas.height) pacman.y = 0;
+
+            pacman.cells.unshift({ x: pacman.x, y: pacman.y });
+            if (pacman.cells.length > 1) {
+                pacman.cells.pop();
+            }
+        }
+
+        function moveEnemy() {
+            const directions = [
+                { dx: grid, dy: 0 },
+                { dx: -grid, dy: 0 },
+                { dx: 0, dy: grid },
+                { dx: 0, dy: -grid }
+            ];
+            const direction = directions[Math.floor(Math.random() * directions.length)];
+            enemy.x += direction.dx;
+            enemy.y += direction.dy;
+
+            if (enemy.x < 0) enemy.x = canvas.width - grid;
+            if (enemy.x >= canvas.width) enemy.x = 0;
+            if (enemy.y < 0) enemy.y = canvas.height - grid;
+            if (enemy.y >= canvas.height) enemy.y = 0;
+
+            enemy.cells.unshift({ x: enemy.x, y: enemy.y });
+            if (enemy.cells.length > 1) {
+                enemy.cells.pop();
+            }
+        }
+
+        function checkCollisions() {
+            for (let wall of walls) {
+                if (
+                    pacman.x < wall.x + wall.width &&
+                    pacman.x + grid > wall.x &&
+                    pacman.y < wall.y + wall.height &&
+                    pacman.y + grid > wall.y
+                ) {
+                    pacman.x -= pacman.dx;
+                    pacman.y -= pacman.dy;
+                    pacman.dx = 0;
+                    pacman.dy = 0;
+                }
+                if (
+                    enemy.x < wall.x + wall.width &&
+                    enemy.x + grid > wall.x &&
+                    enemy.y < wall.y + wall.height &&
+                    enemy.y + grid > wall.y
+                ) {
+                    enemy.x -= enemy.dx;
+                    enemy.y -= enemy.dy;
+                    enemy.dx = 0;
+                    enemy.dy = 0;
+                }
+            }
+
+            if (pacman.x === enemy.x && pacman.y === enemy.y) {
+                lives--;
+                if (lives === 0) {
+                    alert('Game Over');
+                    lives = 3;
+                    score = 0;
+                    pacman.x = grid * 1;
+                    pacman.y = grid * 1;
+                    enemy.x = grid * 10;
+                    enemy.y = grid * 10;
+                }
+                document.getElementById('lives').innerText = 'Lives: ' + lives;
+            }
+        }
+
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+            if (++count < 4) return;
+            count = 0;
+
+            clear();
+            drawWalls();
+            movePacman();
+            moveEnemy();
+            drawPacman();
+            drawEnemy();
+            checkCollisions();
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.which === 37 && pacman.dx === 0) {
+                pacman.dx = -grid;
+                pacman.dy = 0;
+            } else if (e.which === 38 && pacman.dy === 0) {
+                pacman.dx = 0;
+                pacman.dy = -grid;
+            } else if (e.which === 39 && pacman.dx === 0) {
+                pacman.dx = grid;
+                pacman.dy = 0;
+            } else if (e.which === 40 && pacman.dy === 0) {
+                pacman.dx = 0;
+                pacman.dy = grid;
+            }
+        });
+
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
